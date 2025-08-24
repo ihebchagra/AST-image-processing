@@ -76,8 +76,7 @@ cvlibs = ['opencv_{}'.format(
 
 # --------------------------- Extensions definition -------------------------- #
 ext_opencv_mat = Extension("opencv_mat",
-                           sources=["opencv_mat.pyx",
-                                    "opencv_mat.pxd"],
+                           sources=["opencv_mat.pyx"],
                            language="c++",
                            extra_compile_args=["-std=c++11"],
                            extra_link_args=[],
