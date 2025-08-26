@@ -30,7 +30,7 @@ set(CVV_DEBUG_MODE OFF)  # enable/disable openCV visual debug
 #/* ----------------------------- OPENCV LIBRARY ----------------------------- */
 if(NOT OpenCV_LIBS)
         message("OPENCV not loaded so far... Looking for local version!")
-        find_package(OpenCV 4.0.0 REQUIRED)
+        find_package(OpenCV REQUIRED)
         if(NOT OpenCV_LIBS)
                 message(FATAL_ERROR "OpenCV not found")
         endif()

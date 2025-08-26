@@ -5,6 +5,8 @@ configure_file("include/astimp_version.hpp.in" "include/astimp_version.hpp")
 
 include_directories(include)
 
+find_package(OpenCV REQUIRED)
+
 set(PELLET_LABEL_TFLITE_MODEL
     ${CMAKE_CURRENT_SOURCE_DIR}/../pellet_labels/models/ensemble_model.tflite)
 set(GENERATE_CPP_MODEL_PY ${CMAKE_CURRENT_SOURCE_DIR}/../pellet_labels/generate_cpp_model.py)

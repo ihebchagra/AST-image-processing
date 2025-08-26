@@ -1,134 +1,255 @@
-![ASTimp banner](docs/images/Github_social.png)
+# AST-Image-Processing Project Guide
 
+This README provides a comprehensive guide on setting up the development environment using Docker, building the project, and extending the pellet label recognition model.
 
-[![DOI](https://zenodo.org/badge/299842477.svg)](https://zenodo.org/badge/latestdoi/299842477)
+## Table of Contents
+1.  [Project Overview](#1-project-overview)
+2.  [Setting Up the Development Environment with Docker](#2-setting-up-the-development-environment-with-docker)
+3.  [Developing a Web Server using ASTimp](#3-developing-a-web-server-using-astimp)
+4.  [Training the Pellet Label Recognition Model](#4-training-the-pellet-label-recognition-model)
+5.  [Adding New Pellet Classes to the Model](#5-adding-new-pellet-classes-to-the-model)
 
-A library for processing and measuring Disk Diffusion Antibiotic Susceptibility Testing.
-Its functions can measure the inhibition diameter in a picture of a Petri Dish.
-The library can be used in C++ code or as a Python module.
+---
 
-This library was created for [Antibiogo](https://fondation.msf.fr/projets/antibiogo) an AST reading offline mobile application developed by a consortium of The Fundation Médecins Sans Frontières, l'Université d'Évry, le [LAMME](http://www.math-evry.cnrs.fr/doku.php), the Hénri Mondor University Hospital end the Génoscope. The project won the [Google AI impact challenge 2019](https://www.blog.google/outreach-initiatives/google-org/ai-impact-challenge-grantees/). Google has been supporting and helping the development of this project untill October 2020.
+## 1. Project Overview
+This project focuses on image processing for antibiotic susceptibility testing (AST), specifically for pellet label recognition. It involves a C++ library for core image processing functionalities and a Python module for higher-level tasks, including machine learning model training and integration.
 
-# Installation and Quick Start
-Please visit the [Quick Start Page](https://mpascucci.github.io/AST-image-processing/)
+## 2. Setting Up the Development Environment with Docker
 
-## Description
-This image processing library contains functions to measures the inhibition diameters in the picture of a disk diffusion AST.
+This section explains how to set up a portable development environment for the `AST-image-processing` library itself. This environment will build the C++ library and Python module without worrying about system-specific dependencies.
 
-The image should be acquired according to [this protocol](https://mpascucci.github.io/ASTapp-protocol/)
+### Prerequisites
 
-## Project tree
+*   **Docker:** Ensure Docker is installed and running on your system.
+    *   If you encounter `permission denied` errors when running Docker commands, you might need to add your user to the `docker` group: `sudo usermod -aG docker $USER` and then re-login. Alternatively, you can prepend `sudo` to Docker commands.
 
-```{}
-|- astimp/              # astimp sources
-   |- include/
-      |- astimp_version.hpp.in   # contains astimp version
-      |- astException.hpp  # custom astimp exception
-      |- astimp.hpp        # main library header
-      |- stand_labels.hpp  # headers for the generated label templates
-  |- src/
-      |- debug.hpp         # debug functions, not necessary build
-      |- utils.cpp         # auxiliary functions used by the library
-      |- astimp.cpp        # main astimp translation unit
-|- docs/                   # [QuickStart](https://mpascucci.github.io/AST-image-processing/) page sources
-|- python-module/          # python API code for astimp
-      | - install_astimp_python_module.sh # install script fot the python module
-|- tests/                  # test code
-   |- example/             # full AST processing from picture to measurements
-   |- images/              # test images
-   |- include/             # tests level includes
-      |- test_config.h     # contains a reference to the test image folder
-   |- unit_tests/
-      |- *.hpp             # astimp functions unit tests
-      |- astimp_tests.cpp  # unit tests entry point
-|- README.md               # this file
-|- INSTALL_OPENCV.md       # install notes for OpenCV
+### Dockerfile and Build Script
+
+Ensure the `Dockerfile` and `docker_build.sh` script are present in the root directory of your `AST-image-processing` project. These files were previously created by the AI agent.
+
+### Building the `astimp-builder` Docker Image
+
+Navigate to the root directory of your `AST-image-processing` project (where your `Dockerfile` and `docker_build.sh` are located) in your terminal.
+
+Run the following command to build the Docker image:
+
+```bash
+docker build -t astimp-builder .
 ```
 
-## Detailed compiling and troubleshooting
+*   `-t astimp-builder`: Tags the image with the name `astimp-builder` for easy reference.
+*   `.`: Specifies the build context (the current directory), meaning Docker will send your `Dockerfile` and `docker_build.sh` to the Docker daemon.
 
-### Build the library
+This process will:
+*   Download the `manylinux_2_28_x86_64` base image.
+*   **Clone the `AST-image-processing` library from GitHub (or copy it if you chose that option in the Dockerfile).**
+*   Install necessary build tools (cmake, git, opencv-devel, gtest-devel, pkgconfig).
+*   Set up a Python 3.9 virtual environment.
+*   Install Python dependencies (from the *cloned library's* `requirements.txt`, including `auditwheel` and `wheel`).
+*   Execute the `docker_build.sh` script inside the container, which will:
+    *   Build the C++ library (`libastimp.so`).
+    *   Build the Python wheel (`.whl`).
+    *   Manually set the RPATH on the generated Python extension.
+    *   Install the built Python wheel into the container's virtual environment.
 
-If you want to build OpenCV from source, check `INSTALL_OPENCV.md`.
-Run the `run-build.sh` script to build the library.
+The build process might take some time, especially on the first run.
 
-### Build targets
-`make` is equivalent to `make all` and it will build all targets.
+## 3. Developing a Web Server using ASTimp
 
-- `cd build` cd to build dir
+This section outlines the recommended architecture for developing a web server that utilizes the `astimp` library. This setup ensures hot-reloading for your web server code, local Git management, and a clean separation of environments.
 
-- `make astimp` builds the library
+### Architecture Overview
 
-- `make runUnitTests` builds the unit test executable
+*   **`astimp-builder` Image:** This image (built in Section 2) contains the pre-compiled `astimp` library.
+*   **Your Web Server Project:** This is a new, separate Python project on your host machine, managed by its own Git repository. It will contain your web server code and its specific Python dependencies.
+*   **Development Container:** A Docker container based on `astimp-builder` will mount your local web server project, allowing for hot-reloading during development.
 
-- `make fullExample` builds the full AST processing example
+### Your Web Server Project Setup (on your host machine)
 
-### Python API
+Create a new directory for your web server project and initialize it:
 
-To install `astimp` Python module, run `source ./install_astimp_python_module.sh` from `improc/python-module`.
+```bash
+mkdir my_web_server_project
+cd my_web_server_project
+git init
+# Create your web server files (e.g., app.py, requirements.txt)
+```
 
-Do not run `pip install` manually.
+**`my_web_server_project/requirements.txt` (Example):**
 
-Re-run `source ./install_astimp_python_module.sh` whenever you want to bring new C++ changes into the python module.
+```
+flask
+gunicorn
+# Any other dependencies your web server needs, EXCEPT astimp (it's in the base image)
+```
 
-#### Troubleshooting python
-- You must use Python 3 and Numpy 1.7. On some systems, this might mean run `pip3` and `python3` above instead of `pip` or `python`.
-- If you see `expected a readable buffer object`, make sure you're using numpy1.7.
-- If you get `cannot open shared object file: No such file or directory` make sure that your `LD_LIBRARY_PATH` contains the path to `improc/build/astimplib` and the one to the `opencv` shared libraries in yout system (most likely `/usr/local/lib`). Then restart your terminal.
-- If you get `...CMakeLists.txt does not match CMakeLists.txt used to generate cache`, `rm -rf build`.
-- If you get `fatal error: 'cstddef' file not found #include <cstddef>` while building the python module's wheel, run the install script with `-s` flag, this will set `CFLAGS='-stdlib=libc++'`
-- If anything does not update after install, rerun install with `-c` (clean) flag.
-- `Using deprecated NumPy API` can be ignored.
+**`my_web_server_project/Dockerfile.dev`:**
 
-### Run
+```dockerfile
+# Use the image that already has astimp built and installed
+FROM astimp-builder
 
-- Run the unit tests the same way they are run by pipelines: `improc/ $ ./run-tests.sh`
+# Set the working directory for your web server project inside the container
+WORKDIR /app
 
-- Run the full example: `improc/ $ ./build/tests/fullExample ./build/tests/test0.jpg`
+# Install web server specific Python dependencies
+# We copy requirements.txt first to leverage Docker caching
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-- Run benchmarking: `improc/tests/benchmark$ sh ./benchmark.sh -d`. See also improc/tests/benchmark/README.md.
+# Expose the port your web server will listen on
+EXPOSE 8000 # Example port
 
-## Disclaimer
+# Default command to run your web server in development mode
+CMD ["bash"]
+```
 
-The Software and code samples available on this repository are provided "as is" without warranty of any kind, either express or implied.
-Use at your own risk.
+**`my_web_server_project/.dockerignore` (Crucial for hot reloading):**
 
-The use of the software and scripts downloaded on this site is done at your own discretion and risk and with agreement that you will be solely responsible for its use and possible damages to you or others.
-You are solely responsible for adequate protection and backup of the data and equipment used in connection with any of the software, and we will not be liable for any damages that you may suffer in connection with using, modifying or distributing any of this software. No advice or information, whether oral or written, obtained by you from us or from this website shall create any warranty for the software.
+```
+venv/
+__pycache__/
+.git/
+*.pyc
+*.log
+.vscode/
+.idea/
+# Add any other files/folders that should NOT be copied into the image
+# or mounted unnecessarily.
+```
 
-We make makes no warranty that:
-- he software will meet your requirements
-- the software will be uninterrupted, timely, secure or error-free
-- the results that may be obtained from the use of the software will be effective, accurate or reliable
-- the quality of the software will meet your expectations
-- any errors in the software obtained from us will be corrected. 
 
-The software, code sample and their documentation made available on this website:
-- could include technical or other mistakes, inaccuracies or typographical errors. We may make changes to the software or documentation made available on its web site at any time without prior-notice.
-- may be out of date, and we make no commitment to update such materials. 
+### Building and Running Your Web Server Development Container
 
-We assume no responsibility for errors or omissions in the software or documentation available from its web site.
+1.  **Navigate to your web server project directory:**
+    ```bash
+    cd /path/to/my_web_server_project/
+    ```
 
-In no event shall we be liable to you or any third parties for any special, punitive, incidental, indirect or consequential damages of any kind, or any damages whatsoever, including, without limitation, those resulting from loss of use, data or profits, and on any theory of liability, arising out of or in connection with the use of this software. 
+2.  **Build your web server's development image:**
+    ```bash
+    docker build -f Dockerfile.dev -t my-web-server-dev .
+    ```
 
-## Copyright and Licence
+3.  **Run the development container with volume mount and hot reloading:**
+    This command will mount your local project into the container, allowing changes on your host to be immediately reflected.
 
-Copyright 2019 The ASTapp Consortium
+    ```bash
+docker run -it --rm \
+  -v "$(pwd)":/app \
+  -p <HOST_PORT>:8000 \
+  my-web-server-dev \
+  <SERVER_START_COMMAND>
+    ```
+    *   `-it`: Interactive and pseudo-TTY.
+    *   `--rm`: Automatically remove the container when it exits.
+    *   `-v "$(pwd)":/app`: **Mounts your current local project directory (`$(pwd)`) to `/app` inside the container.** This is how hot reloading works.
+    *   `-p <HOST_PORT>:8000`: Maps a port from your host (e.g., `8000`) to the container's exposed port (`8000`).
+    *   `my-web-server-dev`: The name of the image you just built.
+    *   `<SERVER_START_COMMAND>`: Replace this with the actual command to start your web server in development mode with hot reloading.
+        *   **Example (Flask):** `flask run --host=0.0.0.0 --port=8000 --debug`
+        *   **Example (Gunicorn with Flask app `app.py`):** `gunicorn app:app -b 0.0.0.0:8000 --reload`
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
 
-   <http://www.apache.org/licenses/LICENSE-2.0>
+### Using the Development Environment
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Inside the Docker container:
 
-Author: Marco Pascucci <marpas.paris@gmail.com>.
-Principal contributors:
-- Guillaume Boniface-Chang (antibiotic disks label)
-- Ellen Sebastian (benchmark)
-- Jakub Adamek (C++ Tests)
+*   Your *new Python project* files will be at `/app`. Changes you make on your host machine will be immediately reflected here.
+*   The `astimp` Python library (built from the cloned GitHub repository) will be installed in the Python virtual environment and ready for import.
+*   The C++ libraries will be built and accessible.
+
+You can verify the `astimp` library installation by running Python and trying to import `astimp` from *anywhere* in the container:
+
+```bash
+python
+>>> import astimp
+>>> # If no errors, the library is successfully loaded.
+```
+
+## 4. Training the Pellet Label Recognition Model
+
+The training process is managed by scripts within the `pellet_labels/` directory of the *cloned AST-image-processing library*.
+
+### Data Preparation
+
+Your raw training data, typically images and their corresponding labels, are expected to be organized and placed within the `pellet_labels/data/` directory of the *cloned library*. You will need to copy your data into the container's `/tmp/astimp-src/pellet_labels/data/` directory.
+
+### Training Execution
+
+The primary script for initiating training is `pellet_labels/train_ensemble.sh` located in `/tmp/astimp-src/pellet_labels/`. This shell script sets up the necessary Python environment and then calls a Python program, likely `pellet_labels/trainer/task.py`. This Python script handles the core machine learning tasks:
+*   Loading and preprocessing the data from the `data/` directory.
+*   Defining and configuring the neural network model (often specified in `pellet_labels/trainer/model.py`).
+*   Executing the training loops, including optimization and evaluation.
+*   Saving the resulting trained model files (e.g., `.h5` and `.tflite` formats) into the `pellet_labels/models/` directory.
+
+### Model Integration
+
+Once the training is complete and a new `.tflite` model is generated (e.g., `ensemble_model.tflite`), this model is automatically picked up by the C++ build process. A custom command in `astimplib/CMakeLists.txt` uses a Python script (`pellet_labels/generate_cpp_model.py`) to convert this `.tflite` model into C++ code. This C++ code is then compiled into `libastimp.so`, embedding your newly trained model directly into the library.
+
+## 5. Adding New Pellet Classes to the Model
+
+Adding new classes of pellets is a more significant change than just adding more images to existing classes. It requires careful steps to ensure the model is correctly retrained and integrated.
+
+### 1. Data Preparation for New Classes
+
+Organize your new pellet images into the same structured format as your existing training data. Each new class should have its own subdirectory within the `train/` and `valid/` splits of your dataset.
+
+**Example Directory Structure (with a new class 'class_C'):**
+
+```
+your_updated_dataset_name/
+├── train/
+│   ├── class_A/
+│   ├── class_B/
+│   ├── class_C/  # <--- New class data
+│   │   ├── new_pellet_001.jpg
+│   │   └── ...
+│   └── ...
+└── valid/
+    ├── class_A/
+    ├── class_B/
+    ├── class_C/  # <--- New class data
+│   │   ├── new_pellet_xyz.jpg
+│   │   └── ...
+    └── ...
+```
+
+Compress this entire updated dataset directory into a new `.zip` file (e.g., `my_updated_data.zip`).
+
+Copy this new `.zip` file into the `pellet_labels/data/` directory within the *cloned library's source* (i.e., `/tmp/astimp-src/pellet_labels/data/` inside the container).
+
+### 2. Update `pellet_labels/pellet_list.py`
+
+This file is crucial as it defines the classes your model recognizes. You will **need to edit this file** (located at `/tmp/astimp-src/pellet_labels/pellet_list.py` inside the container) to add the names of your new pellet classes to the existing list. Ensure the class names you add here exactly match the directory names you used in your training data.
+
+### 3. Verify Model Architecture Adaptation (`pellet_labels/trainer/model.py`)
+
+Your classification model's final output layer must match the total number of classes. Ideally, your `trainer/model.py` is designed to automatically adapt its output layer size based on the number of unique class directories it finds in the training data. 
+
+*   **Review `pellet_labels/trainer/model.py`:** Check if the model dynamically determines the output layer size (e.g., by reading the number of subdirectories in the training data).
+*   **Manual Adjustment (if needed):** If the model's output layer size is hardcoded, you will need to manually modify `trainer/model.py` (located at `/tmp/astimp-src/pellet_labels/trainer/model.py` inside the container) to increase the size of the final output layer to `(current_number_of_classes + number_of_new_classes)`.
+
+### 4. Retrain the Model
+
+After preparing your data and updating the necessary Python files, you must retrain the model. This will create a new `.tflite` model that includes your new classes.
+
+1.  **Modify `pellet_labels/train_ensemble.sh`:** Update the `--train-files` argument to point to your new `.zip` file containing all your data (old and new classes). This file is located at `/tmp/astimp-src/pellet_labels/train_ensemble.sh` inside the container.
+2.  **Run the Training Script:** Execute the script from the *cloned library's root* inside the container:
+    ```bash
+    cd /tmp/astimp-src/pellet_labels
+    ./train_ensemble.sh
+    ```
+    This process will generate new `.h5` and `.tflite` model files in `/tmp/astimp-src/pellet_labels/models/`.
+
+### 5. Rebuild the C++ Library and Python Wheel
+
+The C++ library (`libastimp.so`) embeds the `.tflite` model. To ensure your application uses the newly trained model with the added classes, you must rebuild the library and the Python wheel.
+
+1.  **Rebuild the Docker Image:** You need to rebuild the Docker image to incorporate the newly trained model into the library. This will trigger the `docker_build.sh` script, which in turn rebuilds the C++ library with the new `.tflite` model and then the Python wheel.
+    ```bash
+    docker build -t astimp-builder .
+    ```
+2.  **Verify in Container:** Once the Docker build is complete, run the container and verify that the `astimp` module can be imported and potentially test its functionality with the new classes.
+
+By following these steps, your model will be retrained to recognize the new pellet classes, and the updated model will be integrated into your C++ library and Python module.
