@@ -133,7 +133,6 @@ __pycache__/
 
 3.  **Run the development container with volume mount and hot reloading:**
     This command will mount your local project into the container, allowing changes on your host to be immediately reflected.
-
     ```bash
 docker run -it --rm \
   -v "$(pwd)":/app \
