@@ -59,7 +59,7 @@ def angular_profile(image, r, d_r=2, d_angle=1, a=0, b=359, f=np.mean):
   return profile
 
 
-def radial_profile(image, angles, d_angle=1, r_min=0, r_max=np.infty, f=np.mean, interpolation=True,):
+def radial_profile(image, angles, d_angle=1, r_min=0, r_max=np.inf, f=np.mean, interpolation=True,):
   """Extract a radial profile from image
   
   Params:

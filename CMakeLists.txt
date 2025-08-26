@@ -15,7 +15,7 @@
 # Author: Marco Pascucci <marpas.paris@gmail.com>.
 # Principal contributors: Guillaume Boniface-Chang, Ellen Sebastian & Jakub Adamek
 
-cmake_minimum_required(VERSION 3.4.1)
+cmake_minimum_required(VERSION 3.5)
 
 #/* ---------------------------- COMPILER OPTIONS ---------------------------- */
 set (CMAKE_CXX_STANDARD 11)

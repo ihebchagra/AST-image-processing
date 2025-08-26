@@ -21,7 +21,7 @@ from libcpp cimport bool
 from libcpp.string cimport string
 from cython.operator import dereference
 
-cdef extern from "core/types.hpp" namespace "cv":
+cdef extern from "opencv2/core/types.hpp" namespace "cv":
   cdef cppclass Rect:
     Rect() except +
     Rect(double x, double y, double width, double height) except +
