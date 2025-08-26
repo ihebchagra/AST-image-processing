@@ -134,20 +134,17 @@ __pycache__/
 3.  **Run the development container with volume mount and hot reloading:**
     This command will mount your local project into the container, allowing changes on your host to be immediately reflected.
     ```bash
-docker run -it --rm \
-  -v "$(pwd)":/app \
-  -p <HOST_PORT>:8000 \
-  my-web-server-dev \
-  <SERVER_START_COMMAND>
+docker run -it --rm -v "$(pwd)":/app -p <HOST_PORT>:8000 my-web-server-dev <SERVER_START_COMMAND>
     ```
-    *   `-it`: Interactive and pseudo-TTY.
-    *   `--rm`: Automatically remove the container when it exits.
-    *   `-v "$(pwd)":/app`: **Mounts your current local project directory (`$(pwd)`) to `/app` inside the container.** This is how hot reloading works.
-    *   `-p <HOST_PORT>:8000`: Maps a port from your host (e.g., `8000`) to the container's exposed port (`8000`).
-    *   `my-web-server-dev`: The name of the image you just built.
-    *   `<SERVER_START_COMMAND>`: Replace this with the actual command to start your web server in development mode with hot reloading.
-        *   **Example (Flask):** `flask run --host=0.0.0.0 --port=8000 --debug`
-        *   **Example (Gunicorn with Flask app `app.py`):** `gunicorn app:app -b 0.0.0.0:8000 --reload`
+
+*   `-it`: Interactive and pseudo-TTY.
+*   `--rm`: Automatically remove the container when it exits.
+*   `-v "$(pwd)":/app`: **Mounts your current local project directory (`$(pwd)`) to `/app` inside the container.** This is how hot reloading works.
+*   `-p <HOST_PORT>:8000`: Maps a port from your host (e.g., `8000`) to the container's exposed port (`8000`).
+*   `my-web-server-dev`: The name of the image you just built.
+*   `<SERVER_START_COMMAND>`: Replace this with the actual command to start your web server in development mode with hot reloading.
+    *   **Example (Flask):** `flask run --host=0.0.0.0 --port=8000 --debug`
+    *   **Example (Gunicorn with Flask app `app.py`):** `gunicorn app:app -b 0.0.0.0:8000 --reload`
 
 
 ### Using the Development Environment
