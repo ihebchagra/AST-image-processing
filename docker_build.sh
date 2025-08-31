@@ -30,20 +30,18 @@ cd python-module
 rm -rf build dist
 python3 setup.py bdist_wheel
 
-# Manually set RPATH on the generated .so file
-echo "--- Setting RPATH on astimp.cpython-313-x86_64-linux-gnu.so ---"
-GENERATED_SO_PATH=$(find build/lib.linux-x86_64-*/ -name "astimp*.so")
-# Get the absolute path to build/astimplib relative to the current working directory inside the container
-ASTIMP_LIB_ABS_PATH=$(pwd)/../build/astimplib
-patchelf --set-rpath "$ASTIMP_LIB_ABS_PATH" "$GENERATED_SO_PATH"
+# --- Repair wheel with auditwheel to bundle shared libraries ---
+echo "--- Repairing wheel with auditwheel ---"
+UNREPAIRED_WHEEL_FILE=$(find dist/ -name "*.whl")
+# Add current directory to LD_LIBRARY_PATH so auditwheel can find libastimp.so
+export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH
+# This will find libastimp.so, bundle it into the wheel, and fix RPATHs.
+auditwheel repair "$UNREPAIRED_WHEEL_FILE" -w dist/
 
-# --- Skipping auditwheel as per user's request ---
-echo "--- Skipping auditwheel repair as requested ---"
-
-# Install the built wheel into the virtual environment for use within the container
-echo "--- Installing the built wheel into the container's environment ---"
-UNREPAIRED_WHEEL_FILE=$(find dist/ -name "*.whl" ! -name "*manylinux*.whl")
-pip install "$UNREPAIRED_WHEEL_FILE"
+# Install the repaired manylinux wheel
+echo "--- Installing the repaired wheel into the container's environment ---"
+REPAIRED_WHEEL_FILE=$(find dist/ -name "*manylinux*.whl")
+pip install "$REPAIRED_WHEEL_FILE"
 
 # Change back to the original working directory (e.g., /app)
 cd "$OLDPWD"

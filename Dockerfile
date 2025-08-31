@@ -20,11 +20,11 @@ WORKDIR /app
 
 # Option 1: Clone from GitHub (for self-contained image, recommended for deployment)
 # This will fetch the library source code directly from GitHub.
-RUN git clone https://github.com/ihebchagra/AST-image-processing.git /tmp/astimp-src
+#RUN git clone https://github.com/ihebchagra/AST-image-processing.git /tmp/astimp-src
 
 # Option 2: Copy from build context (if you're building the library from local source)
 # This assumes the AST-image-processing library source is in the build context.
-# COPY . /tmp/astimp-src
+COPY . /tmp/astimp-src
 
 # --- End Source Code Selection ---
 
@@ -41,7 +41,7 @@ RUN pip install -r /tmp/astimp-src/python-module/requirements.txt
 # Execute the custom build script
 # This script will handle building the C++ library,
 # the Python wheel, and repairing it with auditwheel.
-RUN bash docker_build.sh /tmp/astimp-src
+RUN bash /tmp/astimp-src/docker_build.sh /tmp/astimp-src
 
 # Set the default command to run when the container starts
 # This will drop you into a bash shell where you can inspect the build

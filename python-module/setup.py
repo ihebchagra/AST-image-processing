@@ -62,9 +62,8 @@ ext_astimp = Extension(
         numpy.get_include(),
         ASTIMP_INCLUDE_FOLDER,
     ] + opencv_flags.get('include_dirs', []),
-    library_dirs=opencv_flags.get('library_dirs', []),
-    libraries=opencv_flags.get('libraries', []),
-    extra_objects=[os.path.join(ASTIMP_LIB_FOLDER, "libastimp.so")]
+    library_dirs=opencv_flags.get('library_dirs', []) + [CWD],
+    libraries=opencv_flags.get('libraries', []) + ['astimp'],
 )
 
 # --- Main Setup Function ---
